@@ -1,20 +1,14 @@
-import {
-  ArrowLeft,
-  Minus,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Minus, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import AppShell from "../components/common/AppShell";
 import { useCart } from "../context/useCart";
 
-const API_BASE_URL = "http://localhost:5036";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, "") ||
+  "http://localhost:5036";
 
-function getImageUrl(
-  imageUrl?: string,
-  image?: string
-): string {
+function getImageUrl(imageUrl?: string, image?: string): string {
   const value = imageUrl || image;
 
   if (!value) {
@@ -22,30 +16,20 @@ function getImageUrl(
   }
 
   // Already a complete URL
-  if (
-    value.startsWith("http://") ||
-    value.startsWith("https://")
-  ) {
+  if (value.startsWith("http://") || value.startsWith("https://")) {
     return value;
   }
 
   // Backend returns:
   // /uploads/menu/image.jpg
-  return `${API_BASE_URL}${
-    value.startsWith("/") ? "" : "/"
-  }${value}`;
+  return `${API_BASE_URL}${value.startsWith("/") ? "" : "/"}${value}`;
 }
 
 function Cart() {
   const navigate = useNavigate();
 
-  const {
-    items,
-    increaseQty,
-    decreaseQty,
-    removeFromCart,
-    totalPrice,
-  } = useCart();
+  const { items, increaseQty, decreaseQty, removeFromCart, totalPrice } =
+    useCart();
 
   return (
     <AppShell>
@@ -69,9 +53,7 @@ function Cart() {
             Review order
           </p>
 
-          <h1 className="text-2xl font-extrabold text-ink">
-            Your cart
-          </h1>
+          <h1 className="text-2xl font-extrabold text-ink">Your cart</h1>
         </div>
       </header>
 
@@ -81,9 +63,7 @@ function Cart() {
 
       {items.length === 0 ? (
         <section className="mx-auto max-w-md px-5 py-20 text-center">
-          <h2 className="text-3xl font-extrabold text-ink">
-            Cart is empty
-          </h2>
+          <h2 className="text-3xl font-extrabold text-ink">Cart is empty</h2>
 
           <p className="mt-3 text-sm leading-6 text-ink-muted">
             Add a dish from the menu to start your order.
@@ -104,10 +84,7 @@ function Cart() {
 
         <section className="grid gap-4 px-5 py-6 pb-36 sm:px-8 lg:grid-cols-2 lg:px-10">
           {items.map((item) => {
-            const imageUrl = getImageUrl(
-              item.imageUrl,
-              item.image
-            );
+            const imageUrl = getImageUrl(item.imageUrl, item.image);
 
             return (
               <article
@@ -123,8 +100,7 @@ function Cart() {
                   alt={item.name}
                   className="h-28 w-28 shrink-0 rounded-[1.25rem] object-cover"
                   onError={(event) => {
-                    event.currentTarget.src =
-                      "/placeholder-food.jpg";
+                    event.currentTarget.src = "/placeholder-food.jpg";
                   }}
                 />
 
@@ -140,20 +116,15 @@ function Cart() {
                       </h2>
 
                       <p className="mt-1 text-lg font-extrabold text-sunset">
-                        ETB{" "}
-                        {(
-                          item.price *
-                          item.quantity
-                        ).toFixed(2)}
+                        ETB {(item.price * item.quantity).toFixed(2)}
                       </p>
                     </div>
 
                     {/* REMOVE */}
+
                     <button
                       type="button"
-                      onClick={() =>
-                        removeFromCart(item.id)
-                      }
+                      onClick={() => removeFromCart(item.id)}
                       className="rounded-full p-2 text-ink-muted/50 transition hover:bg-cream-deep hover:text-alert"
                       aria-label={`Remove ${item.name}`}
                       title={`Remove ${item.name}`}
@@ -169,9 +140,7 @@ function Cart() {
                   <div className="mt-3 flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() =>
-                        decreaseQty(item.id)
-                      }
+                      onClick={() => decreaseQty(item.id)}
                       className="rounded-full border border-hair bg-cream p-2 text-ink transition hover:bg-cream-deep active:scale-90"
                       aria-label={`Decrease ${item.name}`}
                       title={`Decrease ${item.name}`}
@@ -185,9 +154,7 @@ function Cart() {
 
                     <button
                       type="button"
-                      onClick={() =>
-                        increaseQty(item.id)
-                      }
+                      onClick={() => increaseQty(item.id)}
                       className="rounded-full bg-gradient-to-br from-marigold to-sunset p-2 text-white transition hover:shadow-md hover:shadow-marigold/40 active:scale-90"
                       aria-label={`Increase ${item.name}`}
                       title={`Increase ${item.name}`}
@@ -209,9 +176,7 @@ function Cart() {
       {items.length > 0 && (
         <footer className="fixed bottom-0 left-1/2 w-full max-w-5xl -translate-x-1/2 rounded-t-[2rem] border-t border-hair bg-surface px-5 py-4 shadow-[0_-8px_30px_-12px_rgba(42,33,24,0.12)] sm:px-8 lg:absolute lg:left-0 lg:translate-x-0 lg:px-10">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-bold text-ink-muted">
-              Total
-            </span>
+            <span className="text-sm font-bold text-ink-muted">Total</span>
 
             <span className="text-2xl font-extrabold text-sunset">
               ETB {totalPrice.toFixed(2)}

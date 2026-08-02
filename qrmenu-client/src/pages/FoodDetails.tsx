@@ -1,25 +1,17 @@
 import { useEffect, useState } from "react";
-import {
-  ArrowLeft,
-  Plus,
-  ShoppingCart,
-} from "lucide-react";
-import {
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { ArrowLeft, Plus, ShoppingCart } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import { getFoodItem } from "../api/api";
 import AppShell from "../components/common/AppShell";
 import { useCart } from "../context/useCart";
 import type { FoodItem } from "../types";
 
-const API_BASE_URL = "http://localhost:5036";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, "") ||
+  "http://localhost:5036";
 
-function getImageUrl(
-  imageUrl?: string,
-  image?: string
-): string {
+function getImageUrl(imageUrl?: string, image?: string): string {
   const value = imageUrl || image;
 
   if (!value) {
@@ -27,10 +19,7 @@ function getImageUrl(
   }
 
   // Already a complete URL
-  if (
-    value.startsWith("http://") ||
-    value.startsWith("https://")
-  ) {
+  if (value.startsWith("http://") || value.startsWith("https://")) {
     return value;
   }
 
@@ -44,14 +33,11 @@ function FoodDetails() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
 
-  const [item, setItem] =
-    useState<FoodItem | null>(null);
+  const [item, setItem] = useState<FoodItem | null>(null);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [error, setError] =
-    useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const loadItem = async () => {
@@ -69,10 +55,7 @@ function FoodDetails() {
 
         setItem(data);
       } catch (error) {
-        console.error(
-          "Failed to load menu item:",
-          error
-        );
+        console.error("Failed to load menu item:", error);
 
         setItem(null);
         setError(true);
@@ -126,10 +109,7 @@ function FoodDetails() {
   // IMAGE URL
   // =========================
 
-  const imageUrl = getImageUrl(
-    item.imageUrl,
-    item.image
-  );
+  const imageUrl = getImageUrl(item.imageUrl, item.image);
 
   // =========================
   // PAGE
@@ -137,7 +117,6 @@ function FoodDetails() {
 
   return (
     <AppShell>
-
       {/* =========================
           IMAGE — circular-offset, hyper-rounded
       ========================= */}
@@ -149,8 +128,7 @@ function FoodDetails() {
             alt={item.name}
             className="h-80 w-full object-cover sm:h-96"
             onError={(event) => {
-              event.currentTarget.src =
-                "/placeholder-food.jpg";
+              event.currentTarget.src = "/placeholder-food.jpg";
             }}
           />
         </div>
@@ -166,7 +144,6 @@ function FoodDetails() {
         >
           <ArrowLeft size={20} />
         </button>
-
       </div>
 
       {/* =========================
@@ -174,11 +151,8 @@ function FoodDetails() {
       ========================= */}
 
       <section className="px-5 py-6 sm:px-8 lg:px-10">
-
         <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-start">
-
           <div>
-
             <h1 className="text-4xl font-extrabold leading-tight text-ink">
               {item.name}
             </h1>
@@ -186,15 +160,12 @@ function FoodDetails() {
             <p className="mt-4 max-w-2xl text-base leading-7 text-ink-muted">
               {item.description}
             </p>
-
           </div>
 
           <p className="shrink-0 rounded-full bg-gradient-to-r from-marigold to-sunset px-5 py-3 text-2xl font-extrabold text-white shadow-sm ring-1 ring-sunset/40">
             ETB {item.price.toFixed(2)}
           </p>
-
         </div>
-
       </section>
 
       {/* =========================
@@ -202,7 +173,6 @@ function FoodDetails() {
       ========================= */}
 
       <div className="fixed bottom-0 left-1/2 w-full max-w-5xl -translate-x-1/2 rounded-t-[2rem] border-t border-hair bg-surface px-5 py-4 shadow-[0_-8px_30px_-12px_rgba(42,33,24,0.12)] sm:px-8 lg:absolute lg:left-0 lg:translate-x-0 lg:px-10">
-
         <button
           type="button"
           onClick={() => {
@@ -212,14 +182,10 @@ function FoodDetails() {
           className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-marigold to-sunset px-4 py-4 font-extrabold text-white shadow-sm ring-1 ring-sunset/40 active:scale-[0.98]"
         >
           <ShoppingCart size={18} />
-
           Add to cart
-
           <Plus size={16} />
         </button>
-
       </div>
-
     </AppShell>
   );
 }
