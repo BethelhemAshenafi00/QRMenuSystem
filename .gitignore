@@ -35,3 +35,7 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+
+# PostgreSQL backups
+*.dump
+*.backup
