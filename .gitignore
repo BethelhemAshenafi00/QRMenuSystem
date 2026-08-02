@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Frontend build
+dist/
+**/dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# ASP.NET
+**/bin/
+**/obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Local database/files
+*.db
+*.sqlite
+*.sqlite3
