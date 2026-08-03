@@ -105,7 +105,8 @@ builder.Services.AddCors(options =>
             .WithOrigins(
                 "http://localhost:5173",
                 "http://localhost:5174",
-                "https://qrmenu-client-osgf.onrender.com"
+                "https://qrmenu-client-osgf.onrender.com",
+                "https://qrmenu-admin-c8qm.onrender.com"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
