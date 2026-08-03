@@ -15,7 +15,7 @@ import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import Modal from "../../components/ui/Modal";
 
-const clientBaseUrl = "https://qrmenu-client-osgf.onrender.com//";
+const clientBaseUrl = "https://qrmenu-client-osgf.onrender.com/";
 
 function buildClientUrl(table: Table) {
   const params = new URLSearchParams();
