@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5036/api',
+  baseURL: 'https://qrmenusystem.onrender.com/api',
 });
 
 // Ensure JSON payloads use the correct Content-Type
