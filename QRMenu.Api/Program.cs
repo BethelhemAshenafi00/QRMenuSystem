@@ -10,9 +10,9 @@ using QRMenu.Api.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// =========================
+// =====================================================
 // Controllers
-// =========================
+// =====================================================
 builder.Services
     .AddControllers()
     .AddJsonOptions(options =>
@@ -21,24 +21,25 @@ builder.Services
             ReferenceHandler.IgnoreCycles;
     });
 
-// =========================
+// =====================================================
 // Swagger
-// =========================
+// =====================================================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// =========================
+// =====================================================
 // Database
-// =========================
+// =====================================================
 builder.Services.AddDbContext<AppDbContext>(options =>
+{
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")
-    )
-);
+    );
+});
 
-// =========================
+// =====================================================
 // JWT Settings
-// =========================
+// =====================================================
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("Jwt")
 );
@@ -46,22 +47,36 @@ builder.Services.Configure<JwtSettings>(
 var jwtSettings =
     builder.Configuration
         .GetSection("Jwt")
-        .Get<JwtSettings>()!;
+        .Get<JwtSettings>();
+
+if (jwtSettings == null)
+{
+    throw new InvalidOperationException(
+        "JWT settings are missing from configuration."
+    );
+}
+
+if (string.IsNullOrWhiteSpace(jwtSettings.Key))
+{
+    throw new InvalidOperationException(
+        "JWT Key is missing from configuration."
+    );
+}
 
 var key = Encoding.UTF8.GetBytes(jwtSettings.Key);
 
-// =========================
-// Services
-// =========================
+// =====================================================
+// Application Services
+// =====================================================
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// =========================
+// =====================================================
 // Authentication
-// =========================
+// =====================================================
 builder.Services
     .AddAuthentication(options =>
     {
@@ -85,18 +100,20 @@ builder.Services
                 ValidAudience = jwtSettings.Audience,
 
                 IssuerSigningKey =
-                    new SymmetricSecurityKey(key)
+                    new SymmetricSecurityKey(key),
+
+                ClockSkew = TimeSpan.FromMinutes(1)
             };
     });
 
-// =========================
+// =====================================================
 // Authorization
-// =========================
+// =====================================================
 builder.Services.AddAuthorization();
 
-// =========================
+// =====================================================
 // CORS
-// =========================
+// =====================================================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClient", policy =>
@@ -114,11 +131,50 @@ builder.Services.AddCors(options =>
     });
 });
 
+// =====================================================
+// Build
+// =====================================================
 var app = builder.Build();
 
-// =========================
+// =====================================================
+// Global Exception Handler
+// IMPORTANT: This helps us see the REAL 500 error.
+// =====================================================
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            context.Response.StatusCode = 500;
+            context.Response.ContentType = "application/json";
+
+            var exceptionHandler =
+                context.Features
+                    .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
+
+            var exception = exceptionHandler?.Error;
+
+            var response = new
+            {
+                status = 500,
+                message = "Internal Server Error",
+                error = exception?.Message,
+                path = context.Request.Path.ToString()
+            };
+
+            await context.Response.WriteAsJsonAsync(response);
+        });
+    });
+}
+
+// =====================================================
 // Swagger
-// =========================
+// =====================================================
 app.UseSwagger();
 
 app.UseSwaggerUI(c =>
@@ -129,28 +185,33 @@ app.UseSwaggerUI(c =>
     );
 });
 
-// =========================
+// =====================================================
 // Middleware
-// =========================
-app.UseHttpsRedirection();
-
-app.UseStaticFiles();
+// =====================================================
 
 // IMPORTANT:
-// Routing must come before CORS.
-app.UseRouting();
+// On Render, HTTPS is normally handled by Render's proxy.
+// We don't need to force HTTP -> HTTPS here.
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
-// CORS must come before Authentication
-// and Authorization.
+// CORS MUST be before authentication/authorization
 app.UseCors("AllowClient");
 
 app.UseAuthentication();
 
 app.UseAuthorization();
 
-// =========================
+app.UseStaticFiles();
+
+// =====================================================
 // Controllers
-// =========================
+// =====================================================
 app.MapControllers();
 
+// =====================================================
+// Run
+// =====================================================
 app.Run();
