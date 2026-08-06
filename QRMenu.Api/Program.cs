@@ -100,9 +100,18 @@ builder.Services.AddAuthorization();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClient", policy =>
-{
-    policy.WithOrigins("http://localhost:5173", "http://localhost:5174", "https://qrmenu-client-osgf.onrender.com", "https://qrmenu-admin-c8qm.onrender.com").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
-});
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "https://qrmenu-client-osgf.onrender.com",
+                "https://qrmenu-admin-c8qm.onrender.com"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
 });
 
 var app = builder.Build();
@@ -125,13 +134,19 @@ app.UseSwaggerUI(c =>
 // =========================
 app.UseHttpsRedirection();
 
+app.UseStaticFiles();
+
+// IMPORTANT:
+// Routing must come before CORS.
+app.UseRouting();
+
+// CORS must come before Authentication
+// and Authorization.
 app.UseCors("AllowClient");
 
 app.UseAuthentication();
 
 app.UseAuthorization();
-
-app.UseStaticFiles();
 
 // =========================
 // Controllers
