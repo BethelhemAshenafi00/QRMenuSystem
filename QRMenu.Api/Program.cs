@@ -142,6 +142,35 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // =====================================================
+// Apply Database Migrations (best-effort)
+// =====================================================
+// On Render, the app cold-starts with a fresh deployment.
+// Running migrations automatically ensures the hosted
+// Postgres schema is up to date. If the DB is unreachable
+// this throws at startup, which makes the real DB error
+// visible in Render logs instead of a confusing CORS / 500.
+try
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider
+            .GetRequiredService<AppDbContext>();
+
+        dbContext.Database.Migrate();
+    }
+}
+catch (Exception ex)
+{
+    // Log but continue so the app still starts and the
+    // /health endpoint can report status. The DB error
+    // will still surface when endpoints are called.
+    app.Logger.LogError(
+        ex,
+        "An error occurred while applying database migrations."
+    );
+}
+
+// =====================================================
 // Middleware Pipeline
 // =====================================================
 
@@ -150,6 +179,44 @@ var app = builder.Build();
 // responses thrown later in the pipeline. This prevents
 // browser errors that misreport server faults as CORS issues.
 app.UseCors(CorsPolicyName);
+
+// =====================================================
+// CORS Fallback for Error Responses
+// =====================================================
+// Exceptions thrown inside controllers are handled by the
+// exception handler below, which runs BEFORE the CORS
+// middleware can add its headers to the error body. As a
+// result, browsers report 500s as CORS errors. This
+// fallback re-adds the allowed origin header to every
+// response, including exceptions, so the real error is
+// visible in the browser instead of a false CORS message.
+app.Use(async (context, next) =>
+{
+    var origin = context.Request.Headers.Origin.ToString();
+
+    // Only add the header when an Origin is present
+    // (i.e. a real cross-origin request).
+    if (!string.IsNullOrWhiteSpace(origin))
+    {
+        context.Response.OnStarting(() =>
+        {
+            if (!context.Response.Headers.ContainsKey(
+                    "Access-Control-Allow-Origin"))
+            {
+                context.Response.Headers["Access-Control-Allow-Origin"] =
+                    origin;
+                context.Response.Headers["Access-Control-Allow-Methods"] =
+                    "GET, POST, PUT, DELETE, OPTIONS";
+                context.Response.Headers["Access-Control-Allow-Headers"] =
+                    "Content-Type, Authorization";
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    await next();
+});
 
 // =====================================================
 // Global Exception Handling
