@@ -38,8 +38,7 @@ export const deleteOrder = async (
   id: number
 ): Promise<void> => {
   await api.delete(`/order/${id}`);
-
-  import api from './axios';
+};
 
 export interface DailySalesReport {
   date: string;
