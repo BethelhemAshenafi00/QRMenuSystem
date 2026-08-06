@@ -32,9 +32,18 @@ builder.Services.AddSwaggerGen();
 // =====================================================
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-    );
+    // Connection string is read from either:
+    //   1. an environment variable "DefaultConnection"
+    //   2. the "ConnectionStrings:DefaultConnection" config value
+    //
+    // On Render, set the env var "DefaultConnection" (or
+    // "ConnectionStrings__DefaultConnection") in the dashboard
+    // so the API can reach your hosted Postgres instead of localhost.
+    var connectionString =
+        Environment.GetEnvironmentVariable("DefaultConnection")
+        ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+    options.UseNpgsql(connectionString);
 });
 
 // =====================================================
@@ -133,6 +142,16 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // =====================================================
+// Middleware Pipeline
+// =====================================================
+
+// IMPORTANT: CORS comes FIRST so that its headers are
+// added to EVERY response -- including any error/exception
+// responses thrown later in the pipeline. This prevents
+// browser errors that misreport server faults as CORS issues.
+app.UseCors(CorsPolicyName);
+
+// =====================================================
 // Global Exception Handling
 // IMPORTANT:
 // This makes API errors visible in Render logs instead
@@ -144,7 +163,30 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseExceptionHandler("/error");
+    // Handle exceptions inline so a clean JSON error is returned,
+    // rather than redirecting to an unmapped "/error" route.
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            var exceptionHandlerPathFeature =
+                context.Features.Get<
+                    Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature
+                >();
+
+            context.Response.StatusCode = 500;
+
+            context.Response.ContentType =
+                "application/json";
+
+            await context.Response.WriteAsJsonAsync(new
+            {
+                status = 500,
+                error = "Internal Server Error",
+                detail = exceptionHandlerPathFeature?.Error?.Message
+            });
+        });
+    });
 }
 
 // =====================================================
@@ -159,14 +201,6 @@ app.UseSwaggerUI(c =>
         "QRMenu API v1"
     );
 });
-
-// =====================================================
-// Middleware Pipeline
-// =====================================================
-
-// IMPORTANT: CORS must be before Authentication,
-// Authorization and Controllers.
-app.UseCors(CorsPolicyName);
 
 app.UseAuthentication();
 
