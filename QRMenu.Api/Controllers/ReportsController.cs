@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QRMenu.Api.Data;
-using QRMenu.Api.DTOs.Reports;
 
 namespace QRMenu.Api.Controllers;
 
@@ -18,6 +17,7 @@ public class ReportsController : ControllerBase
 
     // ==========================================
     // DAILY SALES REPORT
+    // GET /api/reports/daily-sales?date=2026-08-06
     // ==========================================
 
     [HttpGet("daily-sales")]
@@ -35,34 +35,32 @@ public class ReportsController : ControllerBase
                 o.CreatedAt < nextDate)
             .ToListAsync();
 
-        var completedOrders = orders
-            .Where(o => o.Status.Equals(
-                "Completed",
-                StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var totalOrders = orders.Count;
 
-        var cancelledOrders = orders
-            .Count(o => o.Status.Equals(
-                "Cancelled",
-                StringComparison.OrdinalIgnoreCase));
+        var completedOrders = orders.Count(o =>
+            o.Status == "Delivered" ||
+            o.Status == "Completed");
 
-        var totalSales = completedOrders
+        var cancelledOrders = orders.Count(o =>
+            o.Status == "Cancelled");
+
+        var totalSales = orders
+            .Where(o =>
+                o.Status != "Cancelled")
             .Sum(o => o.TotalAmount);
 
-        var averageOrderValue = completedOrders.Count > 0
-            ? totalSales / completedOrders.Count
+        var averageOrderValue = totalOrders > 0
+            ? totalSales / totalOrders
             : 0;
 
-        var response = new DailySalesReportResponse
+        return Ok(new
         {
-            Date = selectedDate,
-            TotalOrders = orders.Count,
-            TotalSales = totalSales,
-            AverageOrderValue = averageOrderValue,
-            CompletedOrders = completedOrders.Count,
-            CancelledOrders = cancelledOrders
-        };
-
-        return Ok(response);
+            date = selectedDate.ToString("yyyy-MM-dd"),
+            totalOrders,
+            totalSales,
+            averageOrderValue,
+            completedOrders,
+            cancelledOrders
+        });
     }
 }

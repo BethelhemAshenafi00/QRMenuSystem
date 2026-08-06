@@ -12,6 +12,7 @@ public class Order
 
     public decimal TotalAmount { get; set; }
 
+    // When the order was created
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Nullable because takeaway orders don't have a table
@@ -19,6 +20,7 @@ public class Order
 
     public Table? Table { get; set; }
 
+    // Order -> OrderItems
     public ICollection<OrderItem> OrderItems { get; set; }
         = new List<OrderItem>();
 }
