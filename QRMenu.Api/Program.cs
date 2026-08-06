@@ -11,7 +11,7 @@ using QRMenu.Api.Services.Interfaces;
 var builder = WebApplication.CreateBuilder(args);
 
 // =====================================================
-// Controllers
+// Controllers + JSON
 // =====================================================
 builder.Services
     .AddControllers()
@@ -47,14 +47,10 @@ builder.Services.Configure<JwtSettings>(
 var jwtSettings =
     builder.Configuration
         .GetSection("Jwt")
-        .Get<JwtSettings>();
-
-if (jwtSettings == null)
-{
-    throw new InvalidOperationException(
-        "JWT settings are missing from configuration."
-    );
-}
+        .Get<JwtSettings>()
+        ?? throw new InvalidOperationException(
+            "JWT settings are missing from configuration."
+        );
 
 if (string.IsNullOrWhiteSpace(jwtSettings.Key))
 {
@@ -88,22 +84,21 @@ builder.Services
     })
     .AddJwtBearer(options =>
     {
-        options.TokenValidationParameters =
-            new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
 
-                ValidIssuer = jwtSettings.Issuer,
-                ValidAudience = jwtSettings.Audience,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
 
-                IssuerSigningKey =
-                    new SymmetricSecurityKey(key),
+            IssuerSigningKey =
+                new SymmetricSecurityKey(key),
 
-                ClockSkew = TimeSpan.FromMinutes(1)
-            };
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
     });
 
 // =====================================================
@@ -114,9 +109,11 @@ builder.Services.AddAuthorization();
 // =====================================================
 // CORS
 // =====================================================
+const string CorsPolicyName = "AllowClient";
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowClient", policy =>
+    options.AddPolicy(CorsPolicyName, policy =>
     {
         policy
             .WithOrigins(
@@ -126,8 +123,7 @@ builder.Services.AddCors(options =>
                 "https://qrmenu-admin-c8qm.onrender.com"
             )
             .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowAnyMethod();
     });
 });
 
@@ -137,8 +133,10 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // =====================================================
-// Global Exception Handler
-// IMPORTANT: This helps us see the REAL 500 error.
+// Global Exception Handling
+// IMPORTANT:
+// This makes API errors visible in Render logs instead
+// of appearing only as a mysterious CORS error.
 // =====================================================
 if (app.Environment.IsDevelopment())
 {
@@ -146,30 +144,7 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseExceptionHandler(errorApp =>
-    {
-        errorApp.Run(async context =>
-        {
-            context.Response.StatusCode = 500;
-            context.Response.ContentType = "application/json";
-
-            var exceptionHandler =
-                context.Features
-                    .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
-
-            var exception = exceptionHandler?.Error;
-
-            var response = new
-            {
-                status = 500,
-                message = "Internal Server Error",
-                error = exception?.Message,
-                path = context.Request.Path.ToString()
-            };
-
-            await context.Response.WriteAsJsonAsync(response);
-        });
-    });
+    app.UseExceptionHandler("/error");
 }
 
 // =====================================================
@@ -186,19 +161,12 @@ app.UseSwaggerUI(c =>
 });
 
 // =====================================================
-// Middleware
+// Middleware Pipeline
 // =====================================================
 
-// IMPORTANT:
-// On Render, HTTPS is normally handled by Render's proxy.
-// We don't need to force HTTP -> HTTPS here.
-if (app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
-
-// CORS MUST be before authentication/authorization
-app.UseCors("AllowClient");
+// IMPORTANT: CORS must be before Authentication,
+// Authorization and Controllers.
+app.UseCors(CorsPolicyName);
 
 app.UseAuthentication();
 
@@ -212,6 +180,16 @@ app.UseStaticFiles();
 app.MapControllers();
 
 // =====================================================
-// Run
+// Health Check
 // =====================================================
+app.MapGet("/health", () =>
+{
+    return Results.Ok(new
+    {
+        status = "healthy",
+        service = "QRMenu API",
+        time = DateTime.UtcNow
+    });
+});
+
 app.Run();
