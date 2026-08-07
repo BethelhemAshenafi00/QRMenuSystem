@@ -7,6 +7,8 @@ using QRMenu.Api.Authentication;
 using QRMenu.Api.Data;
 using QRMenu.Api.Services;
 using QRMenu.Api.Services.Interfaces;
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 
 var builder = WebApplication.CreateBuilder(args);
 
