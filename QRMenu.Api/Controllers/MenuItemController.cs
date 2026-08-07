@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using QRMenu.Api.DTOs.MenuItem;
 using QRMenu.Api.Entities;
 using QRMenu.Api.Services.Interfaces;
+using QRMenu.Api.Services; // Ensure your Cloudinary IImageService namespace is added here
 
 namespace QRMenu.Api.Controllers;
 
@@ -10,14 +11,14 @@ namespace QRMenu.Api.Controllers;
 public class MenuItemController : ControllerBase
 {
     private readonly IMenuItemService _menuItemService;
-    private readonly IWebHostEnvironment _environment;
+    private readonly IImageService _imageService; // Swapped out IWebHostEnvironment for your cloud asset service
 
     public MenuItemController(
         IMenuItemService menuItemService,
-        IWebHostEnvironment environment)
+        IImageService imageService)
     {
         _menuItemService = menuItemService;
-        _environment = environment;
+        _imageService = imageService;
     }
 
     // GET: api/MenuItem
@@ -51,7 +52,8 @@ public class MenuItemController : ControllerBase
 
         if (request.Image is not null)
         {
-            imageUrl = await SaveImageAsync(request.Image);
+            // Uploads image straight to Cloudinary bucket under the "menu" directory folder
+            imageUrl = await _imageService.UploadImageAsync(request.Image, "menu");
         }
 
         var menuItem = new MenuItem
@@ -87,13 +89,10 @@ public class MenuItemController : ControllerBase
 
         var imageUrl = existingItem.ImageUrl;
 
-        // If a new image was uploaded, save it
         if (request.Image is not null)
         {
-            imageUrl = await SaveImageAsync(request.Image);
-
-            // Delete old image
-            DeleteImage(existingItem.ImageUrl);
+            // Uploads replacement image over to Cloudinary bucket
+            imageUrl = await _imageService.UploadImageAsync(request.Image, "menu");
         }
 
         var menuItem = new MenuItem
@@ -129,61 +128,7 @@ public class MenuItemController : ControllerBase
         if (!deleted)
             return NotFound();
 
-        // Delete image from wwwroot
-        DeleteImage(existingItem.ImageUrl);
-
         return NoContent();
-    }
-
-    // Save uploaded image
-    private async Task<string> SaveImageAsync(IFormFile image)
-    {
-        var uploadsFolder = Path.Combine(
-            _environment.WebRootPath,
-            "uploads",
-            "menu"
-        );
-
-        Directory.CreateDirectory(uploadsFolder);
-
-        var extension = Path.GetExtension(image.FileName);
-
-        var fileName = $"{Guid.NewGuid()}{extension}";
-
-        var filePath = Path.Combine(
-            uploadsFolder,
-            fileName
-        );
-
-        await using var stream = new FileStream(
-            filePath,
-            FileMode.Create
-        );
-
-        await image.CopyToAsync(stream);
-
-        return $"/uploads/menu/{fileName}";
-    }
-
-    // Delete uploaded image
-    private void DeleteImage(string? imageUrl)
-    {
-        if (string.IsNullOrWhiteSpace(imageUrl))
-            return;
-
-        var fileName = Path.GetFileName(imageUrl);
-
-        var filePath = Path.Combine(
-            _environment.WebRootPath,
-            "uploads",
-            "menu",
-            fileName
-        );
-
-        if (System.IO.File.Exists(filePath))
-        {
-            System.IO.File.Delete(filePath);
-        }
     }
 
     // Convert Entity → Response DTO

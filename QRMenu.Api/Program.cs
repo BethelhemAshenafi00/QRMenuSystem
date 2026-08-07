@@ -7,6 +7,7 @@ using QRMenu.Api.Authentication;
 using QRMenu.Api.Data;
 using QRMenu.Api.Services;
 using QRMenu.Api.Services.Interfaces;
+using QRMenu.Api.Helpers;
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 
@@ -80,6 +81,8 @@ builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
+builder.Services.AddScoped<IImageService, ImageService>();
 
 // =====================================================
 // Authentication
@@ -117,6 +120,12 @@ builder.Services
 // =====================================================
 builder.Services.AddAuthorization();
 
+
+// 1. Bind the Cloudinary environment variables from Render to your helper model
+builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
+
+// 2. Register the ImageService so your MenuItemController can use it
+builder.Services.AddScoped<IImageService, ImageService>();
 // =====================================================
 // CORS
 // =====================================================
